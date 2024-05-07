@@ -5,7 +5,7 @@ import Flight from "../models/Flight";
 
 function loadFlights()  {
   status.value = "LOADING..."
-  axios.get('https://fidsapi.azurewebsites.net/AirportFlights').then((response) => {
+  axios.get(`https://fidsapi.azurewebsites.net/AirportFlights?parmString=${terminalQuery.value}`).then((response) => {
     flights.value = response.data;
   }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
 }
@@ -54,7 +54,7 @@ const flights = ref<Flight[]>([]);
       
       </table>
   
-    <textarea class="terminal" v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></textarea>
+    <input type="text" class="terminal" v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></input>
 
   </div>
 </template>
