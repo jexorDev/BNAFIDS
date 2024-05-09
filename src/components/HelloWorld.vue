@@ -11,6 +11,7 @@ function loadFlights()  {
 }
 
 function formatTime(date: Date): string {
+  if (!date) return "";
   return new Date(date).toLocaleTimeString('en-us', { hour: "2-digit", minute: "2-digit"})
 }
 
@@ -36,6 +37,7 @@ const flights = ref<Flight[]>([]);
         <th>
           SCHEDULED
         </th>
+        <th>ESTIMATED</th>
         <th>ACTUAL</th>
         <th>STATUS</th>
         <th>GATE</th>
@@ -43,9 +45,10 @@ const flights = ref<Flight[]>([]);
       <tr v-for="flight in flights">
         <td>{{ flight.airlineName }}</td>
         <td>{{ flight.airlineIdentifier }}{{ flight.flightNumber }}</td>
-        <td>{{ flight.cityName }}</td>
+        <td>{{ flight.cityName }}-{{ flight.cityAirportName }}</td>
 
         <td>{{ formatTime(flight.disposition == 0 ? flight.scheduledArrivalTime : flight.scheduledDepartureTime) }}</td>
+        <td>{{ formatTime(flight.disposition == 0 ? flight.estimatedArrivalTime : flight.estimatedDepartureTime) }}</td>
         <td>{{ formatTime(flight.disposition == 0 ? flight.actualArrivalTime : flight.actualDepartureTime) }}</td>
         <td>{{ flight.status }}</td>
 
@@ -72,7 +75,8 @@ const flights = ref<Flight[]>([]);
   width: 100%;
 }
 .flight-table {
-  width: 100%
+  width: 100%;
+  height: 90%;
 }
 table, th, td {
   border-style: dashed;
@@ -82,8 +86,6 @@ table, th, td {
 .terminal {
   bottom: 0;
   width: 100%;
-  height: 65px;
-  font-size: 20px;
 }
 th {
   text-align: left

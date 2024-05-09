@@ -4,10 +4,12 @@ export default interface Flight {
     airlineIdentifier: string;
     airlineName: string;
     airportGate: string;    
-    cityAirportname: string;
+    cityAirportName: string;
     cityCode: string;
     cityName: string;
     disposition: number;
+    estimatedArrivalTime: Date;
+    estimatedDepartureTime: Date;
     flightNumber: string;
     scheduledArrivalTime: Date;
     scheduledDepartureTime: Date;
