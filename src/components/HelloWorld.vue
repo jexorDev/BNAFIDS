@@ -5,9 +5,28 @@ import Flight from "../models/Flight";
 
 function loadFlights()  {
   status.value = "LOADING..."
-  axios.get(`https://fidsapi.azurewebsites.net/AirportFlights?parmString=${terminalQuery.value}`).then((response) => {
-    flights.value = response.data;
-  }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
+  console.log(previousSearchResults.value)
+  if (previousSearchResults.value.has(terminalQuery.value)) {
+    flights.value = previousSearchResults.value.get(terminalQuery.value);
+    status.value = "LOAD COMPLETE. FLIGHTS LOADED FROM CACHE. APPEND -refersh KEYWORD TO GET LATEST RESULTS."
+  } else {      
+      axios.get(`https://fidsapi.azurewebsites.net/AirportFlights?parmString=${terminalQuery.value}`).then((response) => {
+        const responseBody = response.data as GetFlightsResponseBody;
+        console.log(responseBody)
+        flights.value = responseBody.results;
+        nextDataPageUrl.value = responseBody.nextDataPageUrl ?? "";
+        previousSearchResults.value.set(terminalQuery.value, flights.value);
+      }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
+  }
+}
+
+function loadNextPageFlights() {
+   axios.get(`https://fidsapi.azurewebsites.net/AirportFlights?parmString=blah&nextDataPageUrl='${encodeURIComponent(nextDataPageUrl.value)}'`).then((response) => {
+        const responseBody = response.data as GetFlightsResponseBody;
+        flights.value = responseBody.results;
+        nextDataPageUrl.value = responseBody.nextDataPageUrl ?? "";
+        previousSearchResults.value.set(terminalQuery.value, [...previousSearchResults.value.get(terminalQuery.value), ...flights.value]);
+      }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
 }
 
 function formatTime(date: Date): string {
@@ -19,6 +38,9 @@ const terminalPlaceholder = "-arriving frontier -between 16:00 17:30 -from den";
 const status = ref("")
 const terminalQuery = ref("");
 const flights = ref<Flight[]>([]);
+const previousSearchResults = ref<Map<string, Flights[]>>(new Map<string, Flights[]>());
+const nextDataPageUrl = ref("");
+
 </script>
 
 <template>
@@ -56,6 +78,7 @@ const flights = ref<Flight[]>([]);
       </tr>
       
       </table>
+      <a v-show="nextDataPageUrl" @click="loadNextPageFlights">LOAD MORE RESULTS</a>
   
     <input type="text" class="terminal" v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></input>
 
