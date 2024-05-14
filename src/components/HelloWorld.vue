@@ -2,31 +2,36 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import Flight from "../models/Flight";
+import GetFlightsResponseBody from '../models/GetFlightsResposneBody';
+import ResultSetCache from '../models/ResultSetCache';
 
 function loadFlights()  {
   status.value = "LOADING..."
   console.log(previousSearchResults.value)
   if (previousSearchResults.value.has(terminalQuery.value)) {
-    flights.value = previousSearchResults.value.get(terminalQuery.value);
+    const previousSearchResult = previousSearchResults.value.get(terminalQuery.value);
+    if (!previousSearchResult) return;
+    flights.value = previousSearchResult.flights;
     status.value = "LOAD COMPLETE. FLIGHTS LOADED FROM CACHE. APPEND -refersh KEYWORD TO GET LATEST RESULTS."
   } else {      
-      axios.get(`https://fidsapi.azurewebsites.net/AirportFlights?parmString=${terminalQuery.value}`).then((response) => {
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/AirportFlights?parmString=${terminalQuery.value}`).then((response) => {
         const responseBody = response.data as GetFlightsResponseBody;
-        console.log(responseBody)
         flights.value = responseBody.results;
-        nextDataPageUrl.value = responseBody.nextDataPageUrl ?? "";
-        previousSearchResults.value.set(terminalQuery.value, flights.value);
+        nextDataPageUrl.value = responseBody.nextDataPageUrl;
+        previousSearchResults.value.set(terminalQuery.value, {flights: responseBody.results, nextDataPageurl: responseBody.nextDataPageUrl, dataPullTimestamp: new Date()});
       }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
   }
 }
 
 function loadNextPageFlights() {
-   axios.get(`https://fidsapi.azurewebsites.net/AirportFlights?parmString=blah&nextDataPageUrl='${encodeURIComponent(nextDataPageUrl.value)}'`).then((response) => {
-        const responseBody = response.data as GetFlightsResponseBody;
-        flights.value = responseBody.results;
-        nextDataPageUrl.value = responseBody.nextDataPageUrl ?? "";
-        previousSearchResults.value.set(terminalQuery.value, [...previousSearchResults.value.get(terminalQuery.value), ...flights.value]);
-      }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
+   axios.get(`${import.meta.env.VITE_API_BASE_URL}/AirportFlights?parmString=blah&nextDataPageUrl=${nextDataPageUrl.value}`).then((response) => {
+      const previousSearchResult = previousSearchResults.value.get(terminalQuery.value);
+      if (!previousSearchResult) return;
+      const responseBody = response.data as GetFlightsResponseBody;
+      flights.value = [...flights.value, ...responseBody.results];
+      nextDataPageUrl.value = responseBody.nextDataPageUrl;
+      previousSearchResults.value.set(terminalQuery.value, {flights: [...previousSearchResult.flights, ...responseBody.results], nextDataPageurl: responseBody.nextDataPageUrl, dataPullTimestamp: new Date()});
+    }).finally(() => status.value = "LOAD COMPLETE. ALL FLIGHTS LISTED ARE FOR TODAY.");
 }
 
 function formatTime(date: Date): string {
@@ -38,8 +43,8 @@ const terminalPlaceholder = "-arriving frontier -between 16:00 17:30 -from den";
 const status = ref("")
 const terminalQuery = ref("");
 const flights = ref<Flight[]>([]);
-const previousSearchResults = ref<Map<string, Flights[]>>(new Map<string, Flights[]>());
-const nextDataPageUrl = ref("");
+const previousSearchResults = ref<Map<string, ResultSetCache>>(new Map<string, ResultSetCache>());
+const nextDataPageUrl = ref<string | null>(null);
 
 </script>
 
