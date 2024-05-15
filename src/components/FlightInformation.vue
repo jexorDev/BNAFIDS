@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import axios from 'axios';
-import Flight from "../models/Flight";
-import GetFlightsResponseBody from '../models/GetFlightsResposneBody';
-import ResultSetCache from '../models/ResultSetCache';
+import Flight from "../models/Flight.js";
+import GetFlightsResponseBody from '../models/GetFlightsResposneBody.js';
+import ResultSetCache from '../models/ResultSetCache.js';
 
 function loadFlights()  {
   status.value = "LOADING..."
@@ -54,7 +54,7 @@ const previousSearchQueries = computed<string[]>(() => {
 })
 
 const terminalPlaceholder = "-arriving frontier -between 16:00 17:30 -from den";
-const status = ref("")
+const status = ref("WELCOME TO FASTT - FLIGHT AWARE SIMPLIFIED TABULATED TERMINAL. ENTER A QUERY BELOW TO GET FLIGHT INFORMATION")
 const terminalQuery = ref("");
 const flights = ref<Flight[]>([]);
 const previousSearchResults = ref<Map<string, ResultSetCache>>(new Map<string, ResultSetCache>());
@@ -64,6 +64,11 @@ const nextDataPageUrl = ref<string | null>(null);
 
 <template>
   <div class="container">
+    <div>
+      <a href="">[PROBLEM AIRLINE REPORT]</a>
+      <a href="">[STATISTICS]</a>
+      <a href="">[HELP]</a>
+    </div>
     <div class="header" v-text="status"></div>
   
     <table class="flight-table">
@@ -99,7 +104,7 @@ const nextDataPageUrl = ref<string | null>(null);
       </table>
       <a v-show="nextDataPageUrl" @click="loadNextPageFlights">LOAD MORE RESULTS</a>
   
-    <input type="text" class="terminal" v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></input>
+    <input type="text"  v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></input>
     <div v-show="previousSearchQueries.length > 0">
       PREVIOUS SEARCHES
     </div>
@@ -113,7 +118,6 @@ const nextDataPageUrl = ref<string | null>(null);
 .header {
   background-color: white;
   color: black;
-  top: 0;
   width: 100%;
 }
 .container {
@@ -140,7 +144,19 @@ table, th, td {
   margin-top: 5px;
   cursor: pointer;
 }
+a {
+  color: orange
+}
 th {
   text-align: left
+}
+input[type=text] {
+  width: 100%;
+  border:none;
+  outline: none;
+  background:transparent;
+  color: limegreen;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
 }
 </style>
