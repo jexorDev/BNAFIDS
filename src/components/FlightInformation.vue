@@ -14,7 +14,7 @@ function loadFlights()  {
     flights.value = previousSearchResult.flights;
     status.value = "LOAD COMPLETE. FLIGHTS LOADED FROM CACHE. APPEND -refersh KEYWORD TO GET LATEST RESULTS."
   } else {      
-      axios.get(`${import.meta.env.VITE_API_BASE_URL}/AirportFlights?parmString=${terminalQuery.value}`).then((response) => {
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/AirportFlights?${parseQueryString(terminalQuery.value)}`).then((response) => {
         const responseBody = response.data as GetFlightsResponseBody;
         flights.value = responseBody.results;
         nextDataPageUrl.value = responseBody.nextDataPageUrl;
@@ -46,6 +46,64 @@ function formatTime(date: Date): string {
 
 function buildFlightAwareLink(airline: string, flightNumber: string): string {
   return `https://flightaware.com/live/flight/${airline}${flightNumber}`;
+}
+
+function parseQueryString(queryString: string): string {
+  const parametersFromInput = queryString.split('-');
+  const parametersForQueryString: string[] = []
+  
+  for (var parm of parametersFromInput) {
+    
+    if (parm.trim().startsWith("arriving")) {
+      parametersForQueryString.push("dispositionType=3");
+    } else if (parm.trim().startsWith("arrived")) {
+      parametersForQueryString.push("dispositionType=1");
+    } else if (parm.trim().startsWith("departing")) {
+      parametersForQueryString.push("dispositionType=4");
+    } else if (parm.trim().startsWith("departed")) {
+      parametersForQueryString.push("dispositionType=2");
+    }
+
+    if (parm.trim().startsWith("airline")) {
+      parametersForQueryString.push(`airline=${parm.split(' ')[1]}`)
+    }
+
+    if (parm.trim().startsWith("airport")) {
+      parametersForQueryString.push(`airport=${parm.split(' ')[1]}`)
+    }
+
+    if (parm.trim().startsWith("between")) {
+      const fromTime = parm.split(' ')[1];
+      const toTime = parm.split(' ')[2];
+
+      const fromTimeHourString = fromTime.split(":")[0];
+      const fromTimeMinuteString = fromTime.split(":")[1];
+      const fromTimeHour = parseInt(fromTimeHourString);
+      const fromTimeMinute = parseInt(fromTimeMinuteString);
+
+      const toTimeHourString = toTime.split(":")[0];
+      const toTimeMinuteString = toTime.split(":")[1];
+      const toTimeHour = parseInt(toTimeHourString);
+      const toTimeMinute = parseInt(toTimeMinuteString);
+
+      var fromDate = new Date(Date.now());
+      fromDate.setHours(fromTimeHour);
+      fromDate.setMinutes(fromTimeMinute);
+      fromDate.setSeconds(0);
+      parametersForQueryString.push(`dateTimeFrom=${fromDate.toUTCString()}`)
+
+      var toDate = new Date(Date.now());
+      toDate.setHours(toTimeHour);
+      toDate.setMinutes(toTimeMinute);
+      toDate.setSeconds(0);
+      parametersForQueryString.push(`dateTimeTo=${toDate.toUTCString()}`)
+
+    }
+
+  }
+  
+  return parametersForQueryString.join('&')
+
 }
 
 const previousSearchQueries = computed<string[]>(() => {
