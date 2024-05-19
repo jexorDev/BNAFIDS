@@ -6,15 +6,17 @@ import GetFlightsResponseBody from '../models/GetFlightsResposneBody.js';
 import ResultSetCache from '../models/ResultSetCache.js';
 
 function loadFlights()  {
-  status.value = "LOADING..."
-  console.log(previousSearchResults.value)
   if (previousSearchResults.value.has(terminalQuery.value)) {
     const previousSearchResult = previousSearchResults.value.get(terminalQuery.value);
     if (!previousSearchResult) return;
     flights.value = previousSearchResult.flights;
     status.value = "LOAD COMPLETE. FLIGHTS LOADED FROM CACHE. APPEND -refersh KEYWORD TO GET LATEST RESULTS."
   } else {      
-      axios.get(`${import.meta.env.VITE_API_BASE_URL}/AirportFlights?${parseQueryString(terminalQuery.value)}`).then((response) => {
+      const apiParameters = parseQueryString(terminalQuery.value);
+      if (apiParameters === "") return;
+
+      status.value = "LOADING..."
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/AirportFlights?${apiParameters}`).then((response) => {
         const responseBody = response.data as GetFlightsResponseBody;
         flights.value = responseBody.results;
         nextDataPageUrl.value = responseBody.nextDataPageUrl;
@@ -49,6 +51,9 @@ function buildFlightAwareLink(airline: string, flightNumber: string): string {
 }
 
 function parseQueryString(queryString: string): string {
+  let hasDispostion = false;
+  let hasTimeFrame = false;
+  
   const parametersFromInput = queryString.split('-');
   const parametersForQueryString: string[] = []
   
@@ -56,12 +61,16 @@ function parseQueryString(queryString: string): string {
     
     if (parm.trim().startsWith("arriving")) {
       parametersForQueryString.push("dispositionType=3");
+      hasDispostion = true;
     } else if (parm.trim().startsWith("arrived")) {
       parametersForQueryString.push("dispositionType=1");
+      hasDispostion = true;
     } else if (parm.trim().startsWith("departing")) {
       parametersForQueryString.push("dispositionType=4");
+      hasDispostion = true;
     } else if (parm.trim().startsWith("departed")) {
       parametersForQueryString.push("dispositionType=2");
+      hasDispostion = true;
     }
 
     if (parm.trim().startsWith("airline")) {
@@ -75,35 +84,50 @@ function parseQueryString(queryString: string): string {
     if (parm.trim().startsWith("between")) {
       const fromTime = parm.split(' ')[1];
       const toTime = parm.split(' ')[2];
+      
+      parametersForQueryString.push(`dateTimeFrom=${getDateTimeFromString(fromTime).toUTCString()}`);
+      parametersForQueryString.push(`dateTimeTo=${getDateTimeFromString(toTime).toUTCString()}`);
+      
+      hasTimeFrame = true;
+    } else if(parm.trim().startsWith("at")) {
+      const atTimeString = parm.split(' ')[1];
+      const fromTime = getDateTimeFromString(atTimeString);
+      const toTime = getDateTimeFromString(atTimeString);
+      
+      //create 1 hour window
+      fromTime.setMinutes(fromTime.getMinutes() - 30);
+      toTime.setMinutes(toTime.getMinutes() + 30);
+      
+      parametersForQueryString.push(`dateTimeFrom=${fromTime.toUTCString()}`)
+      parametersForQueryString.push(`dateTimeTo=${toTime.toUTCString()}`)
 
-      const fromTimeHourString = fromTime.split(":")[0];
-      const fromTimeMinuteString = fromTime.split(":")[1];
-      const fromTimeHour = parseInt(fromTimeHourString);
-      const fromTimeMinute = parseInt(fromTimeMinuteString);
-
-      const toTimeHourString = toTime.split(":")[0];
-      const toTimeMinuteString = toTime.split(":")[1];
-      const toTimeHour = parseInt(toTimeHourString);
-      const toTimeMinute = parseInt(toTimeMinuteString);
-
-      var fromDate = new Date(Date.now());
-      fromDate.setHours(fromTimeHour);
-      fromDate.setMinutes(fromTimeMinute);
-      fromDate.setSeconds(0);
-      parametersForQueryString.push(`dateTimeFrom=${fromDate.toUTCString()}`)
-
-      var toDate = new Date(Date.now());
-      toDate.setHours(toTimeHour);
-      toDate.setMinutes(toTimeMinute);
-      toDate.setSeconds(0);
-      parametersForQueryString.push(`dateTimeTo=${toDate.toUTCString()}`)
-
+      hasTimeFrame = true;
     }
+  }
 
+  if (!hasDispostion) {
+    status.value = "ERROR: PLEASE SPECIFY FLIGHT DISPOSITION USING -ARRIVING, -ARRIVED, -DEPARTING, -DEPARTED KEYWORDS";
+    return "";
+  } else if (!hasTimeFrame) {
+    status.value = "ERROR: PLEASE SPECIFY FLIGHT TIME FRAME USING -BETWEEN, -AT KEYWORDS"
+    return "";
   }
   
   return parametersForQueryString.join('&')
 
+}
+
+function getDateTimeFromString(timeString: string): Date  {
+    const timeHourString = timeString.split(":")[0];
+    const timeMinuteString = timeString.split(":")[1];
+    const timeHour = parseInt(timeHourString);
+    const timeMinute = parseInt(timeMinuteString);
+    var date = new Date(Date.now());
+    date.setHours(timeHour);
+    date.setMinutes(timeMinute);
+    date.setSeconds(0);
+
+    return date;
 }
 
 const previousSearchQueries = computed<string[]>(() => {
@@ -121,12 +145,8 @@ const nextDataPageUrl = ref<string | null>(null);
 </script>
 
 <template>
-  <div class="container">
-    <div>
-      <a href="">[PROBLEM AIRLINE REPORT]</a>
-      <a href="">[STATISTICS]</a>
-      <a href="">[HELP]</a>
-    </div>
+  <div>
+   
     <div class="header" v-text="status"></div>
   
     <table class="flight-table">
@@ -162,7 +182,7 @@ const nextDataPageUrl = ref<string | null>(null);
       </table>
       <a v-show="nextDataPageUrl" @click="loadNextPageFlights">LOAD MORE RESULTS</a>
   
-    <input type="text"  v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></input>
+    <input type="text" class="query-input"  v-model="terminalQuery" v-on:keyup.enter="loadFlights" :placeholder="terminalPlaceholder"></input>
     <div v-show="previousSearchQueries.length > 0">
       PREVIOUS SEARCHES
     </div>
@@ -178,11 +198,6 @@ const nextDataPageUrl = ref<string | null>(null);
   color: black;
   width: 100%;
 }
-.container {
-  position:absolute;
-  height: 100%;
-  width: 100%;
-}
 .flight-table {
   width: 100%;
   height: 90%;
@@ -192,29 +207,17 @@ table, th, td {
   border-width: 1px;
   border-collapse: collapse;
 }
-.terminal {
-  bottom: 0;
-  width: 100%;
-}
 .previous-search {
   color: white;
   background-color: gray;
   margin-top: 5px;
   cursor: pointer;
 }
-a {
-  color: orange
+.query-input {
+  width: 100%;
 }
 th {
   text-align: left
 }
-input[type=text] {
-  width: 100%;
-  border:none;
-  outline: none;
-  background:transparent;
-  color: limegreen;
-  font-family: 'Courier New', Courier, monospace;
-  font-weight: bold;
-}
+
 </style>

@@ -19,9 +19,22 @@ body {
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: orange;
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: peachpuff;
+  cursor: pointer;
+}
+.selected {
+  color: orangered;
+  cursor: pointer;
+}
+input[type=text] {
+  border:none;
+  outline: none;
+  background:transparent;
+  color: limegreen;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
 }
