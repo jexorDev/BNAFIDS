@@ -4,7 +4,7 @@ import axios from 'axios';
 import Flight from "../models/Flight.js";
 
 function loadFlights()  {
-  axios.get(`${import.meta.env.VITE_API_BASE_URL}/RawFlightData?dispositionType=${disposition.value}&fromDateTime=${getDateTimeFromString('00:00').toISOString()}&toDateTime=${getDateTimeFromString('23:59').toISOString()}`).then((response) => {        
+  axios.get(`${import.meta.env.VITE_API_BASE_URL}/RawFlightData?dispositionType=${disposition.value}&fromDateTime=${getDateTimeFromString(timeFrom.value).toISOString()}&toDateTime=${getDateTimeFromString(timeTo.value).toISOString()}&airline=${airline.value}&city=${city.value}`).then((response) => {        
     flights.value = response.data as Flight[];      
   });
 }
@@ -37,6 +37,7 @@ function getDateTimeFromString(timeString: string): Date  {
 const flights = ref<Flight[]>([]);
 const disposition = ref(1);
 const airline = ref("");
+const city = ref("");
 const timeFrom = ref("00:00");
 const timeTo = ref("23:59");
 
@@ -50,16 +51,19 @@ const numberResults = computed<number>(() => flights.value.length);
     <table>
       <tr>
         <th>
-          Disposition:
+          DISPOSITION:
         </th>
         <th>
-          Airline:
+          TO/FROM:
         </th>
         <th>
-          From:
+          AIRLINE:
         </th>
         <th>
-          To:
+          TIME FROM:
+        </th>
+        <th>
+          TIME TO:
         </th>
         <th></th>
       </tr>
@@ -70,6 +74,9 @@ const numberResults = computed<number>(() => flights.value.length);
           
           <input type="radio" id="departures" name="disposition" value="2" @input="disposition = 2"> 
           <label for="departures">Departures</label>
+        </td>
+        <td>
+          <input v-model="city" type="text" placeholder="ex: DEN" style="width:75px">
         </td>
         <td>
           <input v-model="airline" type="text" placeholder="ex: frontier, fft, f9" style="width:200px">
