@@ -4,9 +4,10 @@ import axios from 'axios';
 import Flight from "../models/Flight.js";
 
 function loadFlights()  {
+  loading.value = true;
   axios.get(`${import.meta.env.VITE_API_BASE_URL}/RawFlightData?dispositionType=${disposition.value}&fromDateTime=${getDateTimeFromString(timeFrom.value).toISOString()}&toDateTime=${getDateTimeFromString(timeTo.value).toISOString()}&airline=${airline.value}&city=${city.value}`).then((response) => {        
     flights.value = response.data as Flight[];      
-  });
+  }).finally(() => loading.value = false);
 }
 
 function formatTime(date: Date): string {
@@ -40,6 +41,7 @@ const airline = ref("");
 const city = ref("");
 const timeFrom = ref("00:00");
 const timeTo = ref("23:59");
+const loading = ref(false);
 
 const numberResults = computed<number>(() => flights.value.length);
 
@@ -88,7 +90,7 @@ const numberResults = computed<number>(() => flights.value.length);
           <input v-model="timeTo" type="text" placeholder="23:59" style="width:100px">
         </td>
         <td>
-          <a @click="loadFlights" style="margin-left: 5px; margin-right: 10px;">LOAD</a>
+          <a @click="loadFlights" style="margin-left: 5px; margin-right: 10px;" :class="loading ? 'loading-cursor': ''">{{ loading ? 'LOADING...' : 'LOAD' }}</a>
         </td>
       </tr>
 
@@ -159,6 +161,9 @@ table, th, td {
 }
 th {
   text-align: left
+}
+.loading-cursor {
+  cursor:progress;
 }
 
 </style>
