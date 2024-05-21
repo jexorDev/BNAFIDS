@@ -5,7 +5,20 @@ import Flight from "../models/Flight.js";
 
 function loadFlights()  {
   loading.value = true;
-  axios.get(`${import.meta.env.VITE_API_BASE_URL}/RawFlightData?dispositionType=${disposition.value}&fromDateTime=${getDateTimeFromString(timeFrom.value).toISOString()}&toDateTime=${getDateTimeFromString(timeTo.value).toISOString()}&airline=${airline.value}&city=${city.value}`).then((response) => {        
+  const fromDate = getDateTimeFromString(timeFrom.value);
+  const toDate = getDateTimeFromString(timeTo.value);
+  let dateOffset = 0;
+
+  if (dayType.value === "TOMORROW") {
+    dateOffset = 1;
+  } else if (dayType.value === "YESTERDAY") {
+    dateOffset = -1;
+  }
+
+  fromDate.setDate(fromDate.getDate() + dateOffset);
+  toDate.setDate(toDate.getDate() + dateOffset);
+
+  axios.get(`${import.meta.env.VITE_API_BASE_URL}/RawFlightData?dispositionType=${disposition.value}&fromDateTime=${fromDate.toISOString()}&toDateTime=${toDate.toISOString()}&airline=${airline.value}&city=${city.value}&includeCodesharePartners=${includeCodesharePartners.value}`).then((response) => {        
     flights.value = response.data as Flight[];      
   }).finally(() => loading.value = false);
 }
@@ -41,6 +54,10 @@ const airline = ref("");
 const city = ref("");
 const timeFrom = ref("00:00");
 const timeTo = ref("23:59");
+const dayType = ref("TODAY");
+const includeCodesharePartners = ref(false);
+const problemAirlinesOnly = ref(false);
+
 const loading = ref(false);
 
 const numberResults = computed<number>(() => flights.value.length);
@@ -50,10 +67,16 @@ const numberResults = computed<number>(() => flights.value.length);
 <template>
   <div>
     <div>FILTERS</div>
-    <table>
+    <span>
+
+    
+    <table style="display: inline;">
       <tr>
         <th>
           DISPOSITION:
+        </th>
+        <th>
+          DAY:
         </th>
         <th>
           TO/FROM:
@@ -67,7 +90,11 @@ const numberResults = computed<number>(() => flights.value.length);
         <th>
           TIME TO:
         </th>
-        <th></th>
+        <th>
+          INCLUDE CODESHARE PARTNERS:
+          </th>
+          <th>PROBLEM AIRLINES VIEW:</th>
+        
       </tr>
       <tr>
         <td>
@@ -76,6 +103,13 @@ const numberResults = computed<number>(() => flights.value.length);
           
           <input type="radio" id="departures" name="disposition" value="2" @input="disposition = 2"> 
           <label for="departures">Departures</label>
+        </td>
+        <td>
+          <select v-model="dayType">
+            <option >TODAY</option>
+            <option>TOMORROW</option>
+            <option>YESTERDAY</option>
+          </select>
         </td>
         <td>
           <input v-model="city" type="text" placeholder="ex: DEN" style="width:75px">
@@ -90,11 +124,24 @@ const numberResults = computed<number>(() => flights.value.length);
           <input v-model="timeTo" type="text" placeholder="23:59" style="width:100px">
         </td>
         <td>
-          <a @click="loadFlights" style="margin-left: 5px; margin-right: 10px;" :class="loading ? 'loading-cursor': ''">{{ loading ? 'LOADING...' : 'LOAD' }}</a>
+            <input v-model="includeCodesharePartners" type="checkbox" style="display: inline;" />
+            <div style="display: inline">
+              {{ includeCodesharePartners ? 'YES' : 'NO' }}
+            </div>
         </td>
+        <td>
+            <input v-model="problemAirlinesOnly" type="checkbox" style="display: inline;" />
+            <div style="display: inline">
+              {{ problemAirlinesOnly ? 'ON' : 'OFF' }}
+            </div>
+        </td>
+        
       </tr>
 
     </table>
+
+    <a @click="loadFlights" style="display: inline; margin-left: 5px;"  :class="loading ? 'loading-cursor': ''" >{{ loading ? 'LOADING...' : '[LOAD]' }}</a>
+  </span>
 
     <div>NUMBER OF FLIGHTS: {{ numberResults }}</div>  
   
